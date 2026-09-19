@@ -283,7 +283,7 @@ test('incremental results stay selectable and partial completion remains visible
   const warning = preview.locator('.status-warning');
   await expect(warning).toContainText('quota exhausted');
   await expect(preview.getByText('partial failure', { exact: true })).toBeVisible();
-  await expect.poll(() => galleryRefreshes.length).toBe(1);
+  expect(galleryRefreshes).toEqual([]);
 });
 
 test('initial load resumes only the newest active job and shows its result', async ({ page }) => {
@@ -307,7 +307,7 @@ test('initial load resumes only the newest active job and shows its result', asy
   expect(perJobEventRequests).not.toContain('/api/generate/job-older/events');
 });
 
-test('successful jobs refresh page one lightly after the current job event stream completes', async ({ page }) => {
+test('successful jobs do not load an unopened gallery after the current job stream completes', async ({ page }) => {
   const galleryRefreshes: Array<Record<string, unknown>> = [];
   const perJobEventRequests: string[] = [];
   page.on('request', (request) => {
@@ -328,12 +328,7 @@ test('successful jobs refresh page one lightly after the current job event strea
   const preview = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Preview' }) });
   await expect(preview.getByRole('img', { name: 'Generated preview' })).toBeVisible();
   await expect(preview.getByText('1.00s', { exact: true })).toBeVisible();
-  await expect.poll(() => galleryRefreshes.length).toBe(1);
-  expect(galleryRefreshes[0]).toMatchObject({
-    page: 1,
-    include_counts: false,
-    include_filter_options: false
-  });
+  expect(galleryRefreshes).toEqual([]);
   expect(perJobEventRequests).toEqual(['/api/generate/job-generated/events']);
 });
 
@@ -355,7 +350,7 @@ test('a healthy global feed still lets the current job stream deliver the termin
   await page.getByRole('button', { name: 'Generate', exact: true }).click();
 
   await expect(page.getByRole('img', { name: 'Generated preview' })).toBeVisible();
-  await expect.poll(() => galleryRefreshes.length).toBe(1);
+  expect(galleryRefreshes).toEqual([]);
   const sourceState = await page.evaluate(() => (window as Window & { __eventSourceScenario?: { opened: string[]; closed: string[] } }).__eventSourceScenario);
   expect(sourceState?.opened).toContain('/api/generate/job-generated/events');
   expect(sourceState?.closed).toContain('/api/generate/job-generated/events');
@@ -415,16 +410,19 @@ test('successful jobs keep a later gallery page in place and announce new images
     galleryRequests.push(request.postDataJSON() as Record<string, unknown>);
   });
   await loadApp(page, { galleryImages: manyGalleryImages(20) });
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
   await page.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(page).toHaveURL(/page=2/);
+  await page.getByRole('link', { name: 'Create', exact: true }).click();
   galleryRequests.length = 0;
 
   await page.getByRole('textbox', { name: 'Prompt', exact: true }).fill('later page prompt');
   await page.getByRole('button', { name: 'Generate', exact: true }).click();
 
   await expect(page.getByRole('status')).toContainText('New images are available in the gallery');
-  await expect(page).toHaveURL(/page=2/);
   expect(galleryRequests).toEqual([]);
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
+  await expect(page).toHaveURL(/page=2/);
 });
 
 test('job history shows detailed terminal statuses', async ({ page }) => {
@@ -445,15 +443,15 @@ test('job history shows detailed terminal statuses', async ({ page }) => {
     ]
   });
 
-  await page.getByRole('button', { name: 'Job History' }).click();
-  const jobsDrawer = page.getByRole('dialog', { name: 'Job History' });
-  await jobsDrawer.getByRole('button', { name: 'History', exact: true }).click();
-  await expect(jobsDrawer.getByText('cancelled', { exact: true })).toBeVisible();
-  await expect(jobsDrawer.getByText('interrupted', { exact: true })).toBeVisible();
-  await expect(jobsDrawer.getByText('upstream error', { exact: true })).toBeVisible();
-  await expect(jobsDrawer.getByText('partial failure', { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  const jobsPage = page.getByRole('main');
+  await jobsPage.getByRole('button', { name: 'History', exact: true }).click();
+  await expect(jobsPage.getByText('cancelled', { exact: true })).toBeVisible();
+  await expect(jobsPage.getByText('interrupted', { exact: true })).toBeVisible();
+  await expect(jobsPage.getByText('upstream error', { exact: true })).toBeVisible();
+  await expect(jobsPage.getByText('partial failure', { exact: true })).toBeVisible();
 
-  const upstreamJob = jobsDrawer.locator('article').filter({ hasText: 'upstream prompt' });
+  const upstreamJob = jobsPage.locator('article').filter({ hasText: 'upstream prompt' });
   await expect(upstreamJob.getByText('Generation failed', { exact: true })).toBeVisible();
   await expect(upstreamJob.getByText(detailedUpstreamError, { exact: true })).toBeHidden();
   await upstreamJob.getByRole('button', { name: 'Show error' }).click();
@@ -462,15 +460,15 @@ test('job history shows detailed terminal statuses', async ({ page }) => {
   await upstreamJob.getByRole('button', { name: 'Hide error' }).click();
   await expect(upstreamJob.getByText(detailedUpstreamError, { exact: true })).toBeHidden();
 
-  await jobsDrawer.getByLabel('Errors only').check();
-  await expect(jobsDrawer.getByText('upstream prompt')).toBeVisible();
-  await expect(jobsDrawer.getByText('partial prompt')).toBeVisible();
-  await expect(jobsDrawer.getByText('cancelled prompt')).toBeHidden();
-  await expect(jobsDrawer.getByText('interrupted prompt')).toBeHidden();
+  await jobsPage.getByLabel('Errors only').check();
+  await expect(jobsPage.getByText('upstream prompt')).toBeVisible();
+  await expect(jobsPage.getByText('partial prompt')).toBeVisible();
+  await expect(jobsPage.getByText('cancelled prompt')).toBeHidden();
+  await expect(jobsPage.getByText('interrupted prompt')).toBeHidden();
 
-  await jobsDrawer.getByLabel('Errors only').uncheck();
-  await expect(jobsDrawer.getByText('cancelled prompt')).toBeVisible();
-  await expect(jobsDrawer.getByText('interrupted prompt')).toBeVisible();
+  await jobsPage.getByLabel('Errors only').uncheck();
+  await expect(jobsPage.getByText('cancelled prompt')).toBeVisible();
+  await expect(jobsPage.getByText('interrupted prompt')).toBeVisible();
 });
 
 test('job history clear removes persisted history rows', async ({ page }) => {
@@ -478,18 +476,18 @@ test('job history clear removes persisted history rows', async ({ page }) => {
     historyJobs: [job('history-1', 'saved prompt'), job('history-2', 'another saved prompt')]
   });
 
-  await page.getByRole('button', { name: 'Job History' }).click();
-  const jobsDrawer = page.getByRole('dialog', { name: 'Job History' });
-  await jobsDrawer.getByRole('button', { name: 'History', exact: true }).click();
-  await expect(jobsDrawer.getByText('saved prompt', { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  const jobsPage = page.getByRole('main');
+  await jobsPage.getByRole('button', { name: 'History', exact: true }).click();
+  await expect(jobsPage.getByText('saved prompt', { exact: true })).toBeVisible();
 
-  await jobsDrawer.getByRole('button', { name: 'Clear' }).click();
+  await jobsPage.getByRole('button', { name: 'Clear' }).click();
   const confirmDialog = page.getByRole('dialog', { name: 'Clear all job history?' });
   await expect(confirmDialog.getByText('local SQLite')).toBeVisible();
   await confirmDialog.getByRole('button', { name: 'Clear' }).click();
 
-  await expect(jobsDrawer.getByText('No job history')).toBeVisible();
-  await expect(jobsDrawer.getByText('saved prompt', { exact: true })).toBeHidden();
+  await expect(jobsPage.getByText('No job history')).toBeVisible();
+  await expect(jobsPage.getByText('saved prompt', { exact: true })).toBeHidden();
 });
 
 test('uploaded edit sources route to edits and clearing restores generation', async ({ page }) => {
@@ -660,6 +658,7 @@ test('gallery edit source can be combined with uploaded references', async ({ pa
   await loadApp(page);
 
   await page.getByLabel('Upload edit image').setInputFiles([{ name: 'extra.png', mimeType: 'image/png', buffer: PNG_BYTES }]);
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
   await page.locator('.gallery-card').first().getByRole('button', { name: 'Edit' }).click();
   await page.getByRole('dialog', { name: 'Edit this image' }).getByRole('button', { name: 'Keep original prompt', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Preview Gallery: img-1.png' })).toBeVisible();
@@ -678,6 +677,7 @@ test('upload and gallery references can be removed independently', async ({ page
 
   const upload = page.getByLabel('Upload edit image');
   await upload.setInputFiles([{ name: 'upload-one.png', mimeType: 'image/png', buffer: PNG_BYTES }]);
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
   await page.locator('.gallery-card').first().getByRole('button', { name: 'Edit' }).click();
   await page.getByRole('dialog', { name: 'Edit this image' }).getByRole('button', { name: 'Keep original prompt', exact: true }).click();
 
@@ -696,13 +696,13 @@ test('upload and gallery references can be removed independently', async ({ page
   expect(request.postDataBuffer()?.toString('latin1') || '').toContain('filename="upload-two.png"');
 });
 
-test('job drawer open baseline with 500 running rows', async ({ page }) => {
+test('jobs page open baseline with 500 running rows', async ({ page }) => {
   test.skip(process.env.RUN_PERFORMANCE_TESTS !== 'true', 'set RUN_PERFORMANCE_TESTS=true to run performance baselines');
   await loadApp(page, { runningJobs: manyJobs(500) });
 
   const startedAt = await page.evaluate(() => performance.now());
-  await page.getByRole('button', { name: 'Job History' }).click();
-  await expect(page.getByRole('dialog', { name: 'Job History' })).toBeVisible();
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Jobs', exact: true })).toBeVisible();
   // The running list is windowed (see the next test), so only the rows near
   // the top render synchronously - row 0 stands in for "the drawer opened".
   await expect(page.getByText('history prompt 0')).toBeVisible();
@@ -711,35 +711,35 @@ test('job drawer open baseline with 500 running rows', async ({ page }) => {
   expect(elapsedMs).toBeLessThan(500);
 });
 
-test('job drawer keeps a bounded render window for 500 running rows', async ({ page }) => {
+test('jobs page keeps a bounded render window for 500 running rows', async ({ page }) => {
   test.skip(process.env.RUN_PERFORMANCE_TESTS !== 'true', 'set RUN_PERFORMANCE_TESTS=true to run performance baselines');
   await loadApp(page, { runningJobs: manyJobs(500) });
 
-  await page.getByRole('button', { name: 'Job History' }).click();
-  const jobsDrawer = page.getByRole('dialog', { name: 'Job History' });
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  const jobsPage = page.getByRole('main');
 
-  const runningScroller = jobsDrawer.locator('.mobile-drawer-scroll');
-  await expect(jobsDrawer.getByText('history prompt 0')).toBeVisible();
-  expect(await jobsDrawer.locator('article').count()).toBeLessThanOrEqual(40);
+  const runningScroller = jobsPage.locator('.mobile-drawer-scroll');
+  await expect(jobsPage.getByText('history prompt 0')).toBeVisible();
+  expect(await jobsPage.locator('article').count()).toBeLessThanOrEqual(40);
 
   await runningScroller.evaluate((node) => node.scrollTo({ top: node.scrollHeight }));
-  await expect(jobsDrawer.getByText('history prompt 499')).toBeVisible();
-  expect(await jobsDrawer.locator('article').count()).toBeLessThanOrEqual(40);
+  await expect(jobsPage.getByText('history prompt 499')).toBeVisible();
+  expect(await jobsPage.locator('article').count()).toBeLessThanOrEqual(40);
 });
 
 test('job history keeps a bounded render window for 500 cached rows', async ({ page }) => {
   test.skip(process.env.RUN_PERFORMANCE_TESTS !== 'true', 'set RUN_PERFORMANCE_TESTS=true to run performance baselines');
   await loadApp(page, { historyJobs: manyJobs(500) });
 
-  await page.getByRole('button', { name: 'Job History' }).click();
-  const jobsDrawer = page.getByRole('dialog', { name: 'Job History' });
-  await jobsDrawer.getByRole('button', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  const jobsPage = page.getByRole('main');
+  await jobsPage.getByRole('button', { name: 'History', exact: true }).click();
 
-  const historyScroller = jobsDrawer.locator('.mobile-drawer-scroll');
-  await expect(jobsDrawer.getByText('history prompt 0')).toBeVisible();
-  expect(await jobsDrawer.locator('article').count()).toBeLessThanOrEqual(40);
+  const historyScroller = jobsPage.locator('.mobile-drawer-scroll');
+  await expect(jobsPage.getByText('history prompt 0')).toBeVisible();
+  expect(await jobsPage.locator('article').count()).toBeLessThanOrEqual(40);
 
   await historyScroller.evaluate((node) => node.scrollTo({ top: node.scrollHeight }));
-  await expect(jobsDrawer.getByText('history prompt 499')).toBeVisible();
-  expect(await jobsDrawer.locator('article').count()).toBeLessThanOrEqual(40);
+  await expect(jobsPage.getByText('history prompt 499')).toBeVisible();
+  expect(await jobsPage.locator('article').count()).toBeLessThanOrEqual(40);
 });

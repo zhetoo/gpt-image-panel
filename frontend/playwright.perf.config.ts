@@ -5,8 +5,8 @@ import { defineConfig, devices } from '@playwright/test';
  * the built output through `vite preview` so measurements reflect the real
  * bundle, and it fixes viewports across desktop and mobile.
  *
- * Run with: npm --prefix frontend run test:perf:production
- * Update screenshot baselines with: npm --prefix frontend run test:perf:production -- --update-snapshots
+ * Run with: pnpm --dir frontend run test:perf:production
+ * Update screenshot baselines with: pnpm --dir frontend run test:perf:production -- --update-snapshots
  */
 export default defineConfig({
   testDir: './tests/perf',
@@ -15,7 +15,7 @@ export default defineConfig({
   workers: 1,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   webServer: {
-    command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173',
+    command: 'pnpm run build && pnpm run preview -- --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 240_000
@@ -27,11 +27,11 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } }
+      use: { ...devices['Desktop Chrome'], channel: 'chrome', viewport: { width: 1440, height: 900 } }
     },
     {
       name: 'mobile',
-      use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 } }
+      use: { ...devices['Pixel 5'], channel: 'chrome', viewport: { width: 390, height: 844 } }
     }
   ]
 });

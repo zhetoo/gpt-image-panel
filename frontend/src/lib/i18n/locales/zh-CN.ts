@@ -46,6 +46,9 @@ const zh: Translation = {
   },
   header: {
     subtitle: '图像生成界面',
+    primaryNavigation: '主导航',
+    create: '创作',
+    gallery: '图库',
     prompts: '提示词',
     promptSnippets: '提示词片段',
     reversePrompt: '图片反推',
@@ -193,7 +196,7 @@ const zh: Translation = {
     saving: '保存中...'
   },
   jobs: {
-    title: '任务历史',
+    title: '任务',
     subtitle: '排队中、运行中和最近完成的任务',
     closeLabel: '关闭任务历史',
     runningTab: '运行中',

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import { language, t, toggleLanguage } from '$lib/i18n';
 
   export let activeJobsCount = 0;
@@ -9,21 +10,25 @@
   export let releaseUrl: string | null = null;
   export let promptSnippetsOpen = false;
   export let imagePromptOpen = false;
-  export let jobsOpen = false;
   export let settingsOpen = false;
   export let onOpenPromptSnippets: () => void = () => {};
   export let onOpenImagePrompt: () => void = () => {};
-  export let onOpenJobs: () => void = () => {};
   export let onOpenSettings: () => void = () => {};
   export let onPrefetchPromptSnippets: () => void = () => {};
   export let onPrefetchImagePrompt: () => void = () => {};
-  export let onPrefetchJobs: () => void = () => {};
   export let onPrefetchSettings: () => void = () => {};
 
   $: versionTitle = hasVersionUpdate
     ? $t.header.versionUpdateTitle(version, latestVersion)
     : $t.header.versionTitle(version);
   $: safeReleaseUrl = releaseUrl?.startsWith('https://github.com/') ? releaseUrl : null;
+  $: activePath = $page.url.pathname;
+
+  function navClass(active: boolean) {
+    return active
+      ? 'control-focus relative inline-flex h-11 items-center rounded-md bg-stone-900 px-3 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-950'
+      : 'control-focus relative inline-flex h-11 items-center rounded-md px-3 text-sm font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100';
+  }
 
   // The header only casts a shadow once there is content underneath it.
   let scrolled = false;
@@ -53,24 +58,16 @@
 </script>
 
 <header class="app-header glass-surface sticky top-0 z-40" data-scrolled={scrolled}>
-  <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:px-6 sm:py-4">
-    <div class="flex min-w-0 flex-1 items-start gap-3">
-      <button
-        type="button"
-        class="mobile-touch-target control-focus h-8 min-w-12 rounded-lg border border-stone-300 px-2 text-xs font-semibold text-stone-600 transition-colors hover:border-emerald-500/60 hover:bg-stone-100 hover:text-stone-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-        title={$t.language.toggleTitle}
-        aria-label={$t.language.toggleTitle}
-        aria-pressed={$language === 'zh-CN'}
-        on:click={toggleLanguage}
-      >
-        {$t.language.button}
-      </button>
+  <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6 sm:py-4">
+    <div class="flex min-w-0 flex-1 items-start gap-3 lg:flex-none">
       <div class="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600" aria-hidden="true">
         <span class="text-sm font-bold text-white">I</span>
       </div>
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-          <h1 class="min-w-0 text-base font-semibold text-stone-950 dark:text-zinc-100">GPT Image Panel</h1>
+          <h1 class="whitespace-nowrap text-base font-semibold text-stone-950 dark:text-zinc-100" aria-label="GPT Image Panel">
+            <span class="sm:hidden">GPT</span><span class="hidden sm:inline">GPT Image Panel</span>
+          </h1>
           {#if version}
             <a
               href={safeReleaseUrl || undefined}
@@ -78,8 +75,8 @@
               rel="noreferrer"
               title={versionTitle}
               class={hasVersionUpdate
-                ? 'control-focus inline-flex items-center whitespace-nowrap rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold leading-5 text-amber-800 transition-colors hover:border-amber-500/70 hover:bg-amber-500/15 dark:text-amber-200'
-                : 'control-focus inline-flex items-center whitespace-nowrap rounded-md border border-stone-300 px-2 py-0.5 text-[11px] font-semibold leading-5 text-stone-500 transition-colors hover:text-stone-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-100'}
+                ? 'control-focus hidden items-center whitespace-nowrap rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold leading-5 text-amber-800 transition-colors hover:border-amber-500/70 hover:bg-amber-500/15 sm:inline-flex dark:text-amber-200'
+                : 'control-focus hidden items-center whitespace-nowrap rounded-md border border-stone-300 px-2 py-0.5 text-[11px] font-semibold leading-5 text-stone-500 transition-colors hover:text-stone-900 sm:inline-flex dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-100'}
             >
               {version}
               {#if hasVersionUpdate}
@@ -92,7 +89,36 @@
       </div>
     </div>
 
-    <div class="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-none">
+    <nav class="order-3 flex w-full items-center gap-1 overflow-x-auto border-t border-stone-200 pt-3 lg:order-none lg:w-auto lg:flex-1 lg:justify-center lg:border-0 lg:pt-0 dark:border-zinc-800" aria-label={$t.header.primaryNavigation}>
+      <a href="/" class={navClass(activePath === '/')} aria-current={activePath === '/' ? 'page' : undefined}>
+        {$t.header.create}
+      </a>
+      <a href="/gallery" class={navClass(activePath.startsWith('/gallery'))} aria-current={activePath.startsWith('/gallery') ? 'page' : undefined}>
+        {$t.header.gallery}
+      </a>
+      <a href="/jobs" class={navClass(activePath.startsWith('/jobs'))} aria-current={activePath.startsWith('/jobs') ? 'page' : undefined}>
+        {$t.header.jobs}
+        {#if activeJobsCount}
+          {#key activeJobsCount}
+            <span class="badge-nudge ml-1.5 h-4 min-w-4 rounded-full bg-emerald-700 px-1 text-center text-[10px] font-semibold leading-4 text-white dark:bg-emerald-600">
+              {activeJobsCount}
+            </span>
+          {/key}
+        {/if}
+      </a>
+    </nav>
+
+    <div class="flex flex-none items-center justify-end gap-1 sm:gap-2">
+      <button
+        type="button"
+        class="mobile-touch-target control-focus h-10 min-w-10 rounded-lg border border-stone-300 px-2 text-xs font-semibold text-stone-600 transition-colors hover:border-emerald-500/60 hover:bg-stone-100 hover:text-stone-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        title={$t.language.toggleTitle}
+        aria-label={$t.language.toggleTitle}
+        aria-pressed={$language === 'zh-CN'}
+        on:click={toggleLanguage}
+      >
+        {$t.language.button}
+      </button>
       <button
         type="button"
         class="mobile-touch-target control-focus inline-flex h-10 min-w-10 items-center justify-center rounded-lg border border-emerald-500/35 px-2 text-emerald-700 transition-colors hover:bg-emerald-500/10 dark:text-emerald-200"
@@ -118,26 +144,6 @@
         on:click={() => onOpenPromptSnippets()}
       >
         <span class="text-sm font-semibold leading-none">{$t.header.prompts}</span>
-      </button>
-      <button
-        type="button"
-        class="header-command relative"
-        title={$t.header.jobHistory}
-        aria-label={$t.header.jobHistory}
-        aria-controls="jobs-drawer"
-        aria-expanded={jobsOpen}
-        on:mouseenter={onPrefetchJobs}
-        on:focus={onPrefetchJobs}
-        on:click={() => onOpenJobs()}
-      >
-        <span class="text-sm font-semibold leading-none">{$t.header.jobs}</span>
-        {#if activeJobsCount}
-          {#key activeJobsCount}
-            <span class="badge-nudge absolute -right-1 -top-1 h-4 min-w-4 rounded-full bg-emerald-700 px-1 text-[10px] font-semibold leading-4 text-white">
-              {activeJobsCount}
-            </span>
-          {/key}
-        {/if}
       </button>
       <button
         type="button"

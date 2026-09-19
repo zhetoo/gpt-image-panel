@@ -215,22 +215,23 @@ Caddy 自动 HTTPS 要求域名解析到服务器，并且入站 `80`、`443` �
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r backend/requirements-dev.txt
-npm --prefix frontend install
-npm run backend:dev
+pnpm --dir frontend install
+pnpm run backend:dev
 ```
 
 另开终端：
 
 ```bash
-npm run frontend:dev
+pnpm run frontend:dev
 ```
 
 打开 `http://localhost:5173`。Vite 会把 `/api` 和 `/health` 代理到 `127.0.0.1:9090`。
+本地前端需要联调远程后端时，可设置 `VITE_API_PROXY_TARGET=https://panel.example.com`。
 
 生产风格 smoke test：
 
 ```bash
-npm run frontend:build
+pnpm run frontend:build
 ALLOW_UNAUTHENTICATED=true .venv/bin/granian --interface asgi backend.app.main:app --host 127.0.0.1 --port 9090
 ```
 
@@ -241,6 +242,7 @@ ALLOW_UNAUTHENTICATED=true .venv/bin/granian --interface asgi backend.app.main:a
 | 变量 | 用途 |
 | --- | --- |
 | `ACCESS_KEY` | 访问密钥。除非清空该变量并设置 `ALLOW_UNAUTHENTICATED=true`，否则必填。 |
+| `ACCESS_KEY_SESSION_MINUTES` | 访问会话有效期（分钟），默认 `10080`（7 天）。 |
 | `TURNSTILE_ENABLED` / `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | 可选 Cloudflare Turnstile 人机验证。启用后，除了 `ACCESS_KEY`，解锁还需要有效的 Turnstile token；site key 通过 `/api/access/status` 提供给登录组件。 |
 | `DEFAULT_API_URL` | 默认上游 API base URL，可带或不带 `/v1`。 |
 | `DEFAULT_API_KEY` | 默认上游 API key。Web Settings 中建议用 `${OPENAI_API_KEY}` 这类 env ref。 |
@@ -412,25 +414,21 @@ Overall Config 会把 override 持久化到 SQLite。部分配置可热更新；
 
 ## 测试
 
-运行后端或契约测试前，请先激活项目本地 `.venv`。npm 的契约/性能测试脚本会使用 `.venv/bin/python`。
+运行后端或契约测试前，请先激活项目本地 `.venv`。pnpm 的契约/性能测试脚本会使用 `.venv/bin/python`。
 
 ```bash
-npm run frontend:check
-npm run frontend:build
+pnpm run frontend:check
+pnpm run frontend:build
 .venv/bin/python -m pytest backend/tests -q
-npm run test:contract
-npm run test:e2e
-npm run test:perf
-npm run test:e2e:perf
+pnpm run test:contract
+pnpm run test:e2e
+pnpm run test:perf
+pnpm run test:e2e:perf
 ```
 
 普通改动跑相关子集即可；大范围或发布前改动跑全套。
 
-如果缺少 Playwright 浏览器：
-
-```bash
-npm --prefix frontend exec playwright install chromium
-```
+E2E 配置直接使用系统安装的 Google Chrome，不会下载或依赖 Playwright 管理的浏览器。
 
 ## 贡献
 

@@ -1,6 +1,2 @@
-<script lang="ts">
-  import Workspace from '$lib/features/workspace/Workspace.svelte';
-</script>
-
-<Workspace />
+<!-- The persistent workspace shell is mounted by the root layout. -->
 

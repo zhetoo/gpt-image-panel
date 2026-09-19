@@ -74,6 +74,7 @@ test('2.5 preset selection is saved without changing the API path', async ({ pag
 test('gallery reuse preserves a 2.5 snapshot and max quality on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await loadApp(page, { galleryImages: [{ ...baseGalleryImages[0], model: 'gpt-image-2.5-sunburst-2026-09-08', quality: 'max', api_path: '/v1/images/generations' }] });
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
   await page.locator('.gallery-card').first().getByRole('button', { name: 'Use all', exact: true }).click();
   await expect(page.getByRole('main').getByRole('textbox', { name: 'Model', exact: true })).toHaveValue('gpt-image-2.5-sunburst-2026-09-08');
   await expect(page.getByRole('combobox', { name: 'Quality', exact: true })).toHaveValue('max');

@@ -1,20 +1,19 @@
+import { pushState, replaceState } from '$app/navigation';
 import type { GalleryFilters } from '$lib/stores/gallery';
 import { readGalleryUrlState, writeGalleryUrlState } from '$lib/stores/galleryUrlState';
 
 export type JobsTab = 'running' | 'history';
 export type HistoryMode = 'replace' | 'push';
 
-export function readPageUrl(url: URL) {
-  const jobsValue = url.searchParams.get('jobs');
+export function readGalleryPageUrl(url: URL) {
   return {
     gallery: readGalleryUrlState(url.searchParams),
-    jobsTab: jobsValue === 'history' || jobsValue === 'running' ? jobsValue : null,
     imageId: url.searchParams.get('image')
   } as const;
 }
 
-export function writePageUrl(
-  state: { page: number; filters: GalleryFilters; imageId: string | null; jobsTab: JobsTab | null },
+export function writeGalleryPageUrl(
+  state: { page: number; filters: GalleryFilters; imageId: string | null },
   mode: HistoryMode
 ) {
   if (typeof window === 'undefined') return;
@@ -22,12 +21,29 @@ export function writePageUrl(
   writeGalleryUrlState(url.searchParams, state.page, state.filters);
   if (state.imageId) url.searchParams.set('image', state.imageId);
   else url.searchParams.delete('image');
-  if (state.jobsTab) url.searchParams.set('jobs', state.jobsTab);
-  else url.searchParams.delete('jobs');
 
+  commitUrl(url, mode);
+}
+
+export function readJobsPageUrl(url: URL): JobsTab {
+  return url.searchParams.get('tab') === 'history' ? 'history' : 'running';
+}
+
+export function writeJobsPageUrl(tab: JobsTab, mode: HistoryMode) {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (tab === 'history') url.searchParams.set('tab', tab);
+  else url.searchParams.delete('tab');
+
+  commitUrl(url, mode);
+}
+
+function commitUrl(url: URL, mode: HistoryMode) {
   const nextUrl = `${url.pathname}${url.search}${url.hash}`;
   const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  if (nextUrl !== currentUrl) window.history[mode === 'push' ? 'pushState' : 'replaceState']({}, '', nextUrl);
+  if (nextUrl === currentUrl) return;
+  if (mode === 'push') pushState(nextUrl, {});
+  else replaceState(nextUrl, {});
 }
 
 export function createUrlSyncScheduler(sync: (mode: HistoryMode) => void) {

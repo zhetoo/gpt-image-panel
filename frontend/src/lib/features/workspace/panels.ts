@@ -2,7 +2,6 @@ import { createLazyComponent } from '$lib/utils/lazyComponent';
 
 export type LazyPanel =
   | 'settings'
-  | 'jobs'
   | 'snippets'
   | 'imagePrompt'
   | 'lightbox'
@@ -13,7 +12,6 @@ export type LazyPanel =
 
 export const lazyPanels = {
   settings: createLazyComponent(() => import('$lib/components/SettingsDrawer.svelte')),
-  jobs: createLazyComponent(() => import('$lib/components/JobHistoryDrawer.svelte')),
   snippets: createLazyComponent(() => import('$lib/components/PromptSnippetsDrawer.svelte')),
   imagePrompt: createLazyComponent(() => import('$lib/components/ImagePromptDialog.svelte')),
   lightbox: createLazyComponent(() => import('$lib/components/Lightbox.svelte')),
@@ -24,7 +22,6 @@ export const lazyPanels = {
 } satisfies Record<LazyPanel, ReturnType<typeof createLazyComponent>>;
 
 export const settingsPanel = lazyPanels.settings;
-export const jobsPanel = lazyPanels.jobs;
 export const snippetsPanel = lazyPanels.snippets;
 export const imagePromptPanel = lazyPanels.imagePrompt;
 export const lightboxPanel = lazyPanels.lightbox;
@@ -45,3 +42,6 @@ export const editGalleryDialogPanel = createLazyComponent(() => import('$lib/com
 // The gallery grid sits below the fold; defer its (icon- and branch-heavy)
 // module until after the first paint.
 export const galleryGridPanel = createLazyComponent(() => import('$lib/components/GalleryGrid.svelte'));
+
+// Full-page operational views stay out of the create route's initial bundle.
+export const jobsPagePanel = createLazyComponent(() => import('$lib/features/jobs/JobsPage.svelte'));

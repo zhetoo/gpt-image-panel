@@ -222,22 +222,23 @@ Create a project-local Python 3.11+ virtual environment first. The `.venv` direc
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r backend/requirements-dev.txt
-npm --prefix frontend install
-npm run backend:dev
+pnpm --dir frontend install
+pnpm run backend:dev
 ```
 
 In another terminal:
 
 ```bash
-npm run frontend:dev
+pnpm run frontend:dev
 ```
 
 Open `http://localhost:5173`. Vite proxies `/api` and `/health` to FastAPI at `127.0.0.1:9090`.
+Set `VITE_API_PROXY_TARGET=https://panel.example.com` when the local frontend needs to use a remote backend during development.
 
 Production-style local smoke test:
 
 ```bash
-npm run frontend:build
+pnpm run frontend:build
 ALLOW_UNAUTHENTICATED=true .venv/bin/granian --interface asgi backend.app.main:app --host 127.0.0.1 --port 9090
 ```
 
@@ -248,6 +249,7 @@ Most runtime options live in `.env.example`. API presets, prompt optimizer, R2 b
 | Variable | Purpose |
 | --- | --- |
 | `ACCESS_KEY` | Access gate key. Required unless it is unset and `ALLOW_UNAUTHENTICATED=true`. |
+| `ACCESS_KEY_SESSION_MINUTES` | Access session lifetime in minutes; defaults to `10080` (7 days). |
 | `TURNSTILE_ENABLED` / `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Optional Cloudflare Turnstile human verification on the access gate. When enabled, unlocking requires a valid Turnstile token in addition to `ACCESS_KEY`; the site key is exposed via `/api/access/status` for the login widget. |
 | `DEFAULT_API_URL` | Default upstream API base URL; may omit or include `/v1`. |
 | `DEFAULT_API_KEY` | Default upstream API key. Prefer env refs such as `${OPENAI_API_KEY}` in Web Settings. |
@@ -444,25 +446,21 @@ The public API surface is contract-tested; keep paths, methods, status codes, SS
 
 ## Testing
 
-Activate the project-local `.venv` before running backend or contract tests. The npm contract/performance scripts use `.venv/bin/python`.
+Activate the project-local `.venv` before running backend or contract tests. The pnpm contract/performance scripts use `.venv/bin/python`.
 
 ```bash
-npm run frontend:check
-npm run frontend:build
+pnpm run frontend:check
+pnpm run frontend:build
 .venv/bin/python -m pytest backend/tests -q
-npm run test:contract
-npm run test:e2e
-npm run test:perf
-npm run test:e2e:perf
+pnpm run test:contract
+pnpm run test:e2e
+pnpm run test:perf
+pnpm run test:e2e:perf
 ```
 
 Run the focused subset relevant to your change. For release-bound or broad changes, run all of them.
 
-If Playwright browsers are missing:
-
-```bash
-npm --prefix frontend exec playwright install chromium
-```
+The E2E configuration uses the system Google Chrome channel; it does not download or require a Playwright-managed browser.
 
 ## Contributing
 

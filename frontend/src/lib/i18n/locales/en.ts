@@ -44,6 +44,9 @@ const en = {
   },
   header: {
     subtitle: 'Image Generation Interface',
+    primaryNavigation: 'Primary navigation',
+    create: 'Create',
+    gallery: 'Gallery',
     prompts: 'Prompts',
     promptSnippets: 'Prompt snippets',
     reversePrompt: 'Reverse prompt',
@@ -191,7 +194,7 @@ const en = {
     saving: 'Saving...'
   },
   jobs: {
-    title: 'Job History',
+    title: 'Jobs',
     subtitle: 'Queued, running, and recent finished jobs',
     closeLabel: 'Close jobs',
     runningTab: 'Running',

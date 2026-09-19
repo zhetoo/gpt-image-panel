@@ -148,13 +148,13 @@
   }
 
   function statusClass(job: GenerateJobStatus) {
-    if (job.status === 'success') return 'text-emerald-300';
+    if (job.status === 'success') return 'text-emerald-700 dark:text-emerald-300';
     if (job.status === 'partial_failure') return 'text-amber-700 dark:text-amber-300';
-    if (job.status === 'error' || job.status === 'upstream_error') return 'text-red-300';
+    if (job.status === 'error' || job.status === 'upstream_error') return 'text-red-700 dark:text-red-300';
     if (job.status === 'cancelled') return 'text-stone-500 dark:text-zinc-400';
-    if (job.status === 'interrupted') return 'text-amber-300';
-    if (job.status === 'running') return 'text-cyan-300';
-    return 'text-amber-300';
+    if (job.status === 'interrupted') return 'text-amber-700 dark:text-amber-300';
+    if (job.status === 'running') return 'text-cyan-700 dark:text-cyan-300';
+    return 'text-amber-700 dark:text-amber-300';
   }
 
   function jobMeta(job: GenerateJobStatus) {
@@ -358,19 +358,19 @@
               {#if aiAssistantEnabled && isFailureJobStatus(job.status)}
                 <button
                   type="button"
-                  class="control-focus rounded-lg border border-cyan-500/35 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  class="control-focus rounded-lg border border-cyan-500/35 px-3 py-2 text-xs font-medium text-cyan-700 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-cyan-200"
                   disabled={diagnosingJobId === job.job_id}
                   onclick={() => onDiagnoseJob(job)}
                 >
                   {diagnosingJobId === job.job_id ? $t.jobs.diagnosing : $t.jobs.diagnose}
                 </button>
               {/if}
-              <button type="button" class="control-focus rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800" onclick={() => onUseJob(job)}>
+              <button type="button" class="control-focus rounded-lg border border-stone-300 px-3 py-2 text-xs text-stone-700 hover:bg-stone-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800" onclick={() => onUseJob(job)}>
                 {$t.jobs.useAsPrompt}
               </button>
               <button
                 type="button"
-                class="control-focus rounded-lg border border-emerald-500/40 px-3 py-2 text-xs font-medium text-emerald-200 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                class="control-focus rounded-lg border border-emerald-500/40 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-200"
                 disabled={isActiveJobStatus(job.status)}
                 title={isActiveJobStatus(job.status) ? $t.jobs.retryUnavailable : $t.jobs.retry}
                 onclick={() => onRetryJob(job)}
@@ -383,7 +383,7 @@
       </div>
       <div style={`height: ${bottomSpacerHeight}px`} aria-hidden="true"></div>
       {#if historyLoading}
-        <div class="rounded-xl border border-zinc-800 bg-zinc-950/35 px-4 py-4 text-center text-xs text-zinc-400">
+        <div class="rounded-xl border border-stone-200 bg-stone-100/70 px-4 py-4 text-center text-xs text-stone-500 dark:border-zinc-800 dark:bg-zinc-950/35 dark:text-zinc-400">
           {$t.jobs.historyLoading}
         </div>
       {/if}

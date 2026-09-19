@@ -6,7 +6,6 @@ import { lazyPanels, type LazyPanel } from '$lib/features/workspace/panels';
 
 export type PanelUiKey =
   | 'settingsOpen'
-  | 'jobsOpen'
   | 'promptSnippetsOpen'
   | 'imagePromptOpen'
   | 'sizeDialogOpen'

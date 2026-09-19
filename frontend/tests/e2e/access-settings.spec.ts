@@ -71,7 +71,6 @@ test('startup data and latest version requests do not wait for access or current
 
   const settingsRequest = page.waitForRequest((request) => new URL(request.url()).pathname === '/api/settings');
   const jobsRequest = page.waitForRequest((request) => new URL(request.url()).pathname === '/api/generate/jobs');
-  const galleryRequest = page.waitForRequest((request) => new URL(request.url()).pathname === '/api/gallery/search');
   const latestVersionRequest = page.waitForRequest((request) => new URL(request.url()).pathname === '/api/version/latest');
 
   try {
@@ -81,7 +80,6 @@ test('startup data and latest version requests do not wait for access or current
       versionStarted,
       settingsRequest,
       jobsRequest,
-      galleryRequest,
       latestVersionRequest
     ]);
   } finally {

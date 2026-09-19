@@ -285,10 +285,7 @@ test('prompt snippets drawer saves, searches, edits, copies, deletes, and uses t
 
   const prompt = page.getByRole('textbox', { name: 'Prompt', exact: true });
   const promptsButton = page.getByRole('button', { name: 'Prompt snippets' });
-  const jobsButton = page.getByRole('button', { name: 'Job History' });
-  const promptsBox = await promptsButton.boundingBox();
-  const jobsBox = await jobsButton.boundingBox();
-  expect(promptsBox?.x ?? 0).toBeLessThan(jobsBox?.x ?? Number.POSITIVE_INFINITY);
+  await expect(page.getByRole('link', { name: 'Jobs', exact: true })).toBeVisible();
 
   await prompt.fill('fresh current prompt\nsecond line');
   await promptsButton.click();
@@ -511,7 +508,7 @@ test('reverse prompt header and dialog stay within a mobile viewport', async ({ 
   const headerActions = [
     page.getByRole('button', { name: 'Reverse prompt', exact: true }),
     page.getByRole('button', { name: 'Prompt snippets' }),
-    page.getByRole('button', { name: 'Job History' }),
+    page.getByRole('link', { name: 'Jobs', exact: true }),
     page.getByRole('button', { name: 'Settings' })
   ];
   for (const action of headerActions) {

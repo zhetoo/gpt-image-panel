@@ -53,13 +53,10 @@ test('settings and prompt snippets fit a mobile viewport without horizontal over
 
 test('main workspace hierarchy stays ordered and touch-safe across viewports', async ({ page }) => {
   await loadApp(page);
-  const headings = ['Prompt', 'AI Assistant', 'Preview', 'Gallery'];
-  const desktopTops: number[] = [];
-  for (const name of headings) {
-    const box = await page.getByRole('heading', { name, exact: true }).boundingBox();
-    desktopTops.push(box?.y ?? -1);
-  }
-  expect(desktopTops).toEqual([...desktopTops].sort((a, b) => a - b));
+  const promptBox = await page.getByRole('heading', { name: 'Prompt', exact: true }).boundingBox();
+  const previewBox = await page.getByRole('heading', { name: 'Preview', exact: true }).boundingBox();
+  expect(promptBox?.x ?? -1).toBeLessThan(previewBox?.x ?? -1);
+  await expect(page.getByRole('heading', { name: 'AI Assistant', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: '/tmp/gpt-image-workspace-desktop.png', fullPage: true });
 
@@ -77,6 +74,8 @@ test('main workspace hierarchy stays ordered and touch-safe across viewports', a
       })
       .map((element) => element.getAttribute('aria-label') || element.textContent?.trim().slice(0, 40) || element.tagName);
   })).toEqual([]);
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Gallery', exact: true })).toBeVisible();
   const galleryActions = page.locator('.gallery-icon-action');
   for (let index = 0; index < Math.min(await galleryActions.count(), 6); index += 1) {
     const box = await galleryActions.nth(index).boundingBox();
@@ -129,7 +128,6 @@ test('settings drawer traps focus and key form controls have accessible names', 
   await expect(page.getByLabel('Sync interval hours')).toHaveValue('0');
   await expect(page.getByLabel('Timeout seconds')).toHaveValue('60');
   await expect(drawer).toContainText('Literal keys are saved as plaintext.');
-  await expect(page.getByLabel('Filter prompt')).toBeVisible();
 
   for (let index = 0; index < 12; index += 1) {
     await page.keyboard.press('Tab');
@@ -159,6 +157,7 @@ test('reduced motion keeps overlays usable and removes control travel', async ({
   expect(travel.motionLift).toBe('0px');
   expect(travel.elevation).not.toBe('');
 
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
   const card = page.locator('.gallery-card').first();
   await card.hover();
   // translateY(0px) resolves to the identity matrix, which is the point: no travel.
@@ -180,6 +179,7 @@ test('reduced motion keeps overlays usable and removes control travel', async ({
 
 test('a dialog reopened during its own exit still accepts clicks', async ({ page }) => {
   await loadApp(page);
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
 
   const openEdit = async () => {
     await page.locator('.gallery-card').first().getByRole('button', { name: 'Edit' }).click();

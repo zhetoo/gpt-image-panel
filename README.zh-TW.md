@@ -215,22 +215,23 @@ Caddy 自動 HTTPS 要求網域解析至伺服器，且入站 `80`、`443` 連�
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r backend/requirements-dev.txt
-npm --prefix frontend install
-npm run backend:dev
+pnpm --dir frontend install
+pnpm run backend:dev
 ```
 
 另開一個終端機：
 
 ```bash
-npm run frontend:dev
+pnpm run frontend:dev
 ```
 
 開啟 `http://localhost:5173`。Vite 會將 `/api` 與 `/health` 代理至 `127.0.0.1:9090`。
+本機前端需要串接遠端後端時，可設定 `VITE_API_PROXY_TARGET=https://panel.example.com`。
 
 正式環境形式的本機 Smoke Test：
 
 ```bash
-npm run frontend:build
+pnpm run frontend:build
 ALLOW_UNAUTHENTICATED=true .venv/bin/granian --interface asgi backend.app.main:app --host 127.0.0.1 --port 9090
 ```
 
@@ -412,25 +413,21 @@ Overall Config 會將 Override 持久化至 SQLite。部分設定可熱更新；
 
 ## 測試
 
-執行後端或契約測試前，請先啟用專案本機 `.venv`。npm 的契約/效能測試指令會使用 `.venv/bin/python`。
+執行後端或契約測試前，請先啟用專案本機 `.venv`。pnpm 的契約/效能測試指令會使用 `.venv/bin/python`。
 
 ```bash
-npm run frontend:check
-npm run frontend:build
+pnpm run frontend:check
+pnpm run frontend:build
 .venv/bin/python -m pytest backend/tests -q
-npm run test:contract
-npm run test:e2e
-npm run test:perf
-npm run test:e2e:perf
+pnpm run test:contract
+pnpm run test:e2e
+pnpm run test:perf
+pnpm run test:e2e:perf
 ```
 
 一般變更只需執行相關子集；大範圍變更或發行前則應執行完整測試。
 
-若缺少 Playwright 瀏覽器：
-
-```bash
-npm --prefix frontend exec playwright install chromium
-```
+E2E 設定直接使用系統安裝的 Google Chrome，不會下載或依賴 Playwright 管理的瀏覽器。
 
 ## 貢獻
 

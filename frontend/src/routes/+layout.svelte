@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '../app.css';
+  import Workspace from '$lib/features/workspace/Workspace.svelte';
   import { i18nReady, initI18n } from '$lib/i18n';
   import { themeStore } from '$lib/stores/theme';
 
@@ -12,6 +13,7 @@
 </script>
 
 {#if $i18nReady}
+  <Workspace />
   <slot />
 {:else}
   <div class="grid min-h-screen place-items-center" aria-busy="true">

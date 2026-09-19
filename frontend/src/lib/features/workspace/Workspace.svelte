@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import AccessGate from '$lib/components/AccessGate.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import EditSourcePicker from '$lib/components/EditSourcePicker.svelte';
@@ -37,7 +39,7 @@
     editPreviewPanel,
     galleryGridPanel,
     imagePromptPanel,
-    jobsPanel,
+    jobsPagePanel,
     lightboxPanel,
     maskEditorPanel,
     nodeImageResultPanel,
@@ -51,7 +53,14 @@
   import { createPanelController } from '$lib/features/workspace/panelController';
   import { installWorkspaceLifecycle } from '$lib/features/workspace/lifecycle';
   import { waitForGalleryAnalysis } from '$lib/features/workspace/gallery';
-  import { createUrlSyncScheduler, readPageUrl, writePageUrl, type JobsTab } from '$lib/utils/pageUrlSync';
+  import {
+    createUrlSyncScheduler,
+    readGalleryPageUrl,
+    readJobsPageUrl,
+    writeGalleryPageUrl,
+    writeJobsPageUrl,
+    type JobsTab
+  } from '$lib/utils/pageUrlSync';
   import {
     galleryEntryToEditForm,
     galleryEntryToPromptForm,
@@ -68,7 +77,19 @@
   let jobDiagnoses = $state<Record<string, AssistantJobDiagnoseResponse>>({});
   let optimizingPrompt = $state(false);
   let gallerySuccessRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  let routeStateReady = $state(false);
+  let appliedRouteUrl = $state('');
   const handledTerminalJobIds = new Set<string>();
+
+  type AppRoute = 'create' | 'gallery' | 'jobs';
+
+  const activeRoute = $derived<AppRoute>(
+    $page.url.pathname.startsWith('/gallery')
+      ? 'gallery'
+      : $page.url.pathname.startsWith('/jobs')
+        ? 'jobs'
+        : 'create'
+  );
 
   const hasEditSource = $derived(editSourceCount($editSourceStore) > 0);
   const editSources = $derived.by(() => {
@@ -125,11 +146,11 @@
     Boolean(optimizerSettings?.enabled && promptOptimizerConfigAvailable)
   );
   const optimizerAssistantEnabled = $derived(
-    optimizerAvailable &&
+    activeRoute === 'create' &&
+      optimizerAvailable &&
       !$uiStore.settingsOpen &&
       !$uiStore.promptSnippetsOpen &&
       !$uiStore.imagePromptOpen &&
-      !$uiStore.jobsOpen &&
       !$uiStore.editPreviewOpen &&
       !$uiStore.sizeDialogOpen &&
       !$uiStore.maskEditorOpen &&
@@ -160,15 +181,15 @@
   );
 
   const urlSync = createUrlSyncScheduler((mode) => {
-    writePageUrl(
-      {
+    if (activeRoute === 'gallery') {
+      writeGalleryPageUrl({
         page: $galleryStore.page,
         filters: $galleryStore.filters,
-        imageId: $lightboxStore.image?.id || null,
-        jobsTab: $uiStore.jobsOpen ? jobsTab : null
-      },
-      mode
-    );
+        imageId: $lightboxStore.image?.id || null
+      }, mode);
+    } else if (activeRoute === 'jobs') {
+      writeJobsPageUrl(jobsTab, mode);
+    }
   });
   const lightboxController = createLightboxController({
     getImage: () => $lightboxStore.image,
@@ -230,13 +251,26 @@
     }
   });
 
+  $effect(() => {
+    if (activeRoute === 'gallery') void galleryGridPanel.prefetch();
+    if (activeRoute === 'jobs') void jobsPagePanel.prefetch();
+  });
+
+  $effect(() => {
+    const routeUrl = `${$page.url.pathname}${$page.url.search}`;
+    if (!routeStateReady || routeUrl === appliedRouteUrl) return;
+    void applyUrlStateToApp();
+  });
+
   async function loadInitialData() {
-    await Promise.all([settingsStore.loadSettings(), jobsStore.loadJobs(), applyUrlStateToApp()]);
+    await Promise.all([settingsStore.loadSettings(), jobsStore.loadJobs()]);
+    await applyUrlStateToApp();
     const activeJob = $jobsStore.jobs[0];
     if (activeJob) trackJob(activeJob.job_id);
     urlSync.setReady();
     urlSync.flush();
     jobsStore.startJobsEvents();
+    routeStateReady = true;
   }
 
   async function loadAuthenticatedData() {
@@ -292,27 +326,8 @@
         galleryEditDialogOpen ||
         $uiStore.promptSnippetsOpen ||
         $uiStore.imagePromptOpen ||
-        $uiStore.jobsOpen ||
         $uiStore.settingsOpen
     );
-  }
-
-  async function openJobsDrawer(tab: JobsTab = jobsTab) {
-    rememberPanelFocus('jobs');
-    if (!(await ensurePanel('jobs'))) return;
-    jobsTab = tab;
-    setUi('jobsOpen', true);
-    if (tab === 'history' && !$jobsStore.historyLoaded && !$jobsStore.historyLoading) {
-      void jobsStore.loadJobHistory();
-    } else if (tab === 'history' && $jobsStore.historyNeedsRefresh && !$jobsStore.historyLoading) {
-      void jobsStore.refreshHistoryIfLoaded();
-    }
-    urlSync.schedule();
-  }
-
-  function closeJobsDrawer() {
-    closeUiPanel('jobs', 'jobsOpen');
-    urlSync.schedule();
   }
 
   async function openPromptSnippetsDrawer() {
@@ -341,27 +356,41 @@
     } else if (tab === 'history' && $jobsStore.historyNeedsRefresh && !$jobsStore.historyLoading) {
       void jobsStore.refreshHistoryIfLoaded();
     }
-    urlSync.schedule();
+    urlSync.schedule('push');
   }
 
   async function applyUrlStateToApp() {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
-    const { gallery: state, jobsTab: nextJobsTab, imageId } = readPageUrl(url);
+    const nextRoute: AppRoute = url.pathname.startsWith('/gallery')
+      ? 'gallery'
+      : url.pathname.startsWith('/jobs')
+        ? 'jobs'
+        : 'create';
+    appliedRouteUrl = `${url.pathname}${url.search}`;
 
     urlSync.setApplying(true);
     try {
-      galleryStore.setPageAndFilters(state.page, state.filters);
-      jobsTab = nextJobsTab || 'running';
-      if (nextJobsTab && (await ensurePanel('jobs'))) setUi('jobsOpen', true);
-      else setUi('jobsOpen', false);
-
-      if (nextJobsTab === 'history' && !$jobsStore.historyLoaded && !$jobsStore.historyLoading) {
-        void jobsStore.loadJobHistory();
+      if (nextRoute === 'gallery') {
+        const { gallery: state, imageId } = readGalleryPageUrl(url);
+        const resumeCurrentGallery = url.searchParams.size === 0 && Boolean($galleryStore.gallery);
+        if (!resumeCurrentGallery) galleryStore.setPageAndFilters(state.page, state.filters);
+        await galleryStore.loadGallery(resumeCurrentGallery ? $galleryStore.page : state.page);
+        await syncLightboxFromUrl(imageId);
+      } else {
+        if ($lightboxStore.image) {
+          lightboxController.close();
+          restorePanelFocus('lightbox');
+        }
+        if (nextRoute === 'jobs') {
+          jobsTab = readJobsPageUrl(url);
+          if (jobsTab === 'history' && !$jobsStore.historyLoaded && !$jobsStore.historyLoading) {
+            void jobsStore.loadJobHistory();
+          } else if (jobsTab === 'history' && $jobsStore.historyNeedsRefresh && !$jobsStore.historyLoading) {
+            void jobsStore.refreshHistoryIfLoaded();
+          }
+        }
       }
-
-      await galleryStore.loadGallery(state.page);
-      await syncLightboxFromUrl(imageId);
     } finally {
       urlSync.setApplying(false);
     }
@@ -446,6 +475,7 @@
   }
 
   function scheduleGalleryRefreshAfterSuccess() {
+    if (!$galleryStore.gallery) return;
     if (gallerySuccessRefreshTimer) clearTimeout(gallerySuccessRefreshTimer);
     gallerySuccessRefreshTimer = setTimeout(() => {
       gallerySuccessRefreshTimer = null;
@@ -776,6 +806,11 @@
     }, 0);
   }
 
+  async function navigateToCreate(focusPrompt = true) {
+    if (activeRoute !== 'create') await goto('/');
+    if (focusPrompt) focusPromptAfterGalleryEdit();
+  }
+
   function applyGalleryEditChoice(reusePrompt: boolean) {
     const image = galleryEditImage;
     if (!image) return;
@@ -789,7 +824,7 @@
     promptForm.replace(reusePrompt ? nextForm : { ...nextForm, prompt: '' });
     closeGalleryEditDialog();
     closeLightbox();
-    focusPromptAfterGalleryEdit();
+    void navigateToCreate();
     showToast($t.messages.galleryImageReady);
   }
 
@@ -1005,6 +1040,7 @@
     promptForm.replace(galleryEntryToPromptOnly(image, promptForm.snapshot()));
     copyPromptBestEffort(image.prompt);
     closeLightbox();
+    void navigateToCreate();
     showToast($t.messages.galleryPromptLoaded);
   }
 
@@ -1013,12 +1049,13 @@
     promptForm.replace(galleryEntryToPromptForm(image, promptForm.presetDefaultModel, promptForm.apiPath));
     copyPromptBestEffort(image.prompt);
     closeLightbox();
+    void navigateToCreate();
     showToast(ignoredEditPath ? $t.messages.galleryEditApiPathIgnored : $t.messages.galleryParamsLoaded);
   }
 
   function useJobAsPrompt(job: GenerateJobStatus) {
     promptForm.replace(jobToPromptForm(job, promptForm.presetDefaultModel));
-    closeJobsDrawer();
+    void navigateToCreate();
     showToast($t.messages.jobLoadedIntoPrompt);
   }
 
@@ -1042,9 +1079,9 @@
     }
   }
 
-  function retryJob(job: GenerateJobStatus) {
+  async function retryJob(job: GenerateJobStatus) {
     promptForm.replace(jobToPromptForm(job, promptForm.presetDefaultModel));
-    closeJobsDrawer();
+    await navigateToCreate(false);
     if (job.operation === 'edit') {
       if (!$editSourceStore.files.length && !$editSourceStore.selectedGalleryImageId) {
         previewStore.setError($t.messages.editRetryNeedsSource);
@@ -1077,7 +1114,6 @@
     // Loaded in its own chunk right after hydration so it stays out of the
     // homepage dependency graph without leaving a long-lived gap.
     void aiAssistantPanel.prefetch();
-    void galleryGridPanel.prefetch();
 
     const popstate = () => {
       void applyUrlStateToApp();
@@ -1133,7 +1169,6 @@
       shouldPrefetch: canPrefetchNonCritical,
       prefetchCommonPanels: () => {
         prefetchPanel('settings');
-        prefetchPanel('jobs');
         prefetchPanel('snippets');
       },
       cleanup: () => {
@@ -1154,7 +1189,7 @@
 </script>
 
 <svelte:head>
-  <title>GPT Image Panel</title>
+  <title>{activeRoute === 'gallery' ? `${$t.header.gallery} · GPT Image Panel` : activeRoute === 'jobs' ? `${$t.header.jobs} · GPT Image Panel` : 'GPT Image Panel'}</title>
 </svelte:head>
 
 <a class="skip-link control-focus" href="#main-content">{$t.common.skipToMain}</a>
@@ -1175,15 +1210,12 @@
   {activeJobsCount}
   promptSnippetsOpen={$uiStore.promptSnippetsOpen}
   imagePromptOpen={$uiStore.imagePromptOpen}
-  jobsOpen={$uiStore.jobsOpen}
   settingsOpen={$uiStore.settingsOpen}
   onOpenPromptSnippets={openPromptSnippetsDrawer}
   onOpenImagePrompt={openImagePromptDialog}
-  onOpenJobs={openJobsDrawer}
   onOpenSettings={() => void openUiPanel('settings', 'settingsOpen')}
   onPrefetchPromptSnippets={() => prefetchPanel('snippets')}
   onPrefetchImagePrompt={() => prefetchPanel('imagePrompt')}
-  onPrefetchJobs={() => prefetchPanel('jobs')}
   onPrefetchSettings={() => prefetchPanel('settings')}
 />
 
@@ -1255,110 +1287,125 @@
 />
 {/if}
 
-{#if $jobsPanel.component}
-{@const Panel = $jobsPanel.component}
-<Panel
-  open={$uiStore.jobsOpen}
-  activeTab={jobsTab}
-  jobs={$jobsStore.jobs}
-  historyJobs={$jobsStore.historyJobs}
-  historyLoading={$jobsStore.historyLoading}
-  historyLoaded={$jobsStore.historyLoaded}
-  historyHasMore={$jobsStore.historyHasMore}
-  historyFailedOnly={$jobsStore.historyFailedOnly}
-  selectedIds={$jobsStore.selectedIds}
-  onClose={closeJobsDrawer}
-  onTabChange={setJobsTab}
-  onRefresh={jobsStore.loadJobs}
-  onRefreshHistory={jobsStore.loadJobHistory}
-  onLoadMoreHistory={jobsStore.loadMoreJobHistory}
-  onHistoryFailedOnlyChange={jobsStore.setHistoryFailedOnly}
-  onClearHistory={clearJobHistory}
-  onToggle={jobsStore.toggleSelection}
-  onToggleAll={jobsStore.toggleAll}
-  onCancelSelected={jobsStore.cancelSelected}
-  onUseJob={useJobAsPrompt}
-  onRetryJob={retryJob}
-  aiAssistantEnabled={aiAssistantAvailable}
-  diagnosingJobId={$assistantStore.diagnoseLoadingJobId}
-  diagnoses={jobDiagnoses}
-  onDiagnoseJob={diagnoseJob}
-/>
-{/if}
-
-<main id="main-content" tabindex="-1" class:optimizer-gutter={optimizerAssistantEnabled} class="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-28 sm:px-6 sm:pb-32">
+<main
+  id="main-content"
+  tabindex="-1"
+  class:optimizer-gutter={optimizerAssistantEnabled}
+  class={`mx-auto space-y-6 px-4 py-6 pb-28 sm:px-6 sm:pb-32 ${activeRoute === 'gallery' ? 'max-w-7xl' : activeRoute === 'jobs' ? 'max-w-6xl' : 'max-w-7xl'}`}
+>
   <ToastHost toast={$toastStore} />
 
-  <PromptForm
-    loading={$previewStore.loading}
-    optimizing={optimizingPrompt}
-    optimizerEnabled={optimizerAvailable}
-    editPlannerEnabled={aiAssistantAvailable}
-    editPlanning={$assistantStore.editPlanLoading}
-    onSubmit={submitPrompt}
-    {hasEditSource}
-    onPlanEdit={planEdit}
-    onOptimize={optimizePrompt}
-    onAppendPromptTag={appendPromptTag}
-    onOpenSize={() => void openUiPanel('size', 'sizeDialogOpen')}
-  >
-    {#snippet editSource()}
-      <EditSourcePicker
-        bind:this={editPicker}
-        sources={editSources}
-        onChange={handleEditFile}
-        onDropFiles={handleEditFiles}
-        onPreview={openEditPreview}
-        onRemove={removeEditSource}
-        onClear={clearEditSource}
-        onEditMask={openMaskEditor}
-        onRemoveMask={removeEditMask}
-        {maskSupported}
+  {#if activeRoute === 'create'}
+    <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+      <div class="min-w-0 space-y-6">
+        <PromptForm
+          loading={$previewStore.loading}
+          optimizing={optimizingPrompt}
+          optimizerEnabled={optimizerAvailable}
+          editPlannerEnabled={aiAssistantAvailable}
+          editPlanning={$assistantStore.editPlanLoading}
+          onSubmit={submitPrompt}
+          {hasEditSource}
+          onPlanEdit={planEdit}
+          onOptimize={optimizePrompt}
+          onAppendPromptTag={appendPromptTag}
+          onOpenSize={() => void openUiPanel('size', 'sizeDialogOpen')}
+        >
+          {#snippet editSource()}
+            <EditSourcePicker
+              bind:this={editPicker}
+              sources={editSources}
+              onChange={handleEditFile}
+              onDropFiles={handleEditFiles}
+              onPreview={openEditPreview}
+              onRemove={removeEditSource}
+              onClear={clearEditSource}
+              onEditMask={openMaskEditor}
+              onRemoveMask={removeEditMask}
+              {maskSupported}
+            />
+          {/snippet}
+        </PromptForm>
+
+        {#if $aiAssistantPanel.component}
+          {@const Panel = $aiAssistantPanel.component}
+          <Panel
+            enabled={aiAssistantAvailable}
+            optimizerEnabled={optimizerAvailable}
+            loading={$assistantStore.promptLoading || $assistantStore.paramsLoading}
+            onApplyPrompt={applyAssistantPrompt}
+            onInsertPrompt={insertAssistantPrompt}
+            onSaveSnippet={saveAssistantSnippet}
+            onApplyParams={applyAssistantParams}
+          />
+        {/if}
+      </div>
+
+      <div class="min-w-0 lg:sticky lg:top-28">
+        <PreviewPanel onRegenerate={regenerate} onClear={clearPreview} />
+      </div>
+    </div>
+  {:else if activeRoute === 'gallery'}
+    {#if $galleryGridPanel.component}
+      {@const Panel = $galleryGridPanel.component}
+      <Panel
+        canSyncR2={r2BackupAvailable}
+        canNodeImageUpload={nodeImageAvailable}
+        onFilter={setGalleryFilter}
+        onResetFilters={resetGalleryFilters}
+        onPage={loadGalleryPage}
+        onLoadStats={loadGalleryStats}
+        onFavorite={toggleFavorite}
+        onDelete={deleteImage}
+        onDeleteAll={deleteAllImages}
+        onImport={importArchive}
+        onExport={exportArchive}
+        onSync={syncGallery}
+        onOpen={openLightbox}
+        onEdit={openGalleryEditDialog}
+        onUsePrompt={useGalleryPrompt}
+        onUseAll={useGalleryParams}
+        onNodeImageUpload={uploadGalleryImageToNodeImage}
+        onBatchDelete={batchDeleteGallery}
+        onBatchFavorite={batchFavoriteGallery}
+        onBatchNodeImageUpload={batchUploadGalleryToNodeImage}
+        canAiAnalyze={aiAssistantAvailable}
+        onBatchAiAnalyze={batchAnalyzeGallery}
       />
-    {/snippet}
-  </PromptForm>
-
-  {#if $aiAssistantPanel.component}
-    {@const Panel = $aiAssistantPanel.component}
-    <Panel
-      enabled={aiAssistantAvailable}
-      optimizerEnabled={optimizerAvailable}
-      loading={$assistantStore.promptLoading || $assistantStore.paramsLoading}
-      onApplyPrompt={applyAssistantPrompt}
-      onInsertPrompt={insertAssistantPrompt}
-      onSaveSnippet={saveAssistantSnippet}
-      onApplyParams={applyAssistantParams}
-    />
-  {/if}
-
-  <PreviewPanel onRegenerate={regenerate} onClear={clearPreview} />
-
-  {#if $galleryGridPanel.component}
-    {@const Panel = $galleryGridPanel.component}
-    <Panel
-      canSyncR2={r2BackupAvailable}
-      canNodeImageUpload={nodeImageAvailable}
-      onFilter={setGalleryFilter}
-      onResetFilters={resetGalleryFilters}
-      onPage={loadGalleryPage}
-      onLoadStats={loadGalleryStats}
-      onFavorite={toggleFavorite}
-      onDelete={deleteImage}
-      onDeleteAll={deleteAllImages}
-      onImport={importArchive}
-      onExport={exportArchive}
-      onSync={syncGallery}
-      onOpen={openLightbox}
-      onEdit={openGalleryEditDialog}
-      onUsePrompt={useGalleryPrompt}
-      onUseAll={useGalleryParams}
-      onNodeImageUpload={uploadGalleryImageToNodeImage}
-      onBatchDelete={batchDeleteGallery}
-      onBatchFavorite={batchFavoriteGallery}
-      onBatchNodeImageUpload={batchUploadGalleryToNodeImage}
-      canAiAnalyze={aiAssistantAvailable}
-      onBatchAiAnalyze={batchAnalyzeGallery}
-    />
+    {:else}
+      <div class="grid min-h-64 place-items-center" role="status">{$t.common.loadingFeature}</div>
+    {/if}
+  {:else}
+    {#if $jobsPagePanel.component}
+      {@const Panel = $jobsPagePanel.component}
+      <Panel
+        activeTab={jobsTab}
+        jobs={$jobsStore.jobs}
+        historyJobs={$jobsStore.historyJobs}
+        historyLoading={$jobsStore.historyLoading}
+        historyLoaded={$jobsStore.historyLoaded}
+        historyHasMore={$jobsStore.historyHasMore}
+        historyFailedOnly={$jobsStore.historyFailedOnly}
+        selectedIds={$jobsStore.selectedIds}
+        onTabChange={setJobsTab}
+        onRefresh={jobsStore.loadJobs}
+        onRefreshHistory={jobsStore.loadJobHistory}
+        onLoadMoreHistory={jobsStore.loadMoreJobHistory}
+        onHistoryFailedOnlyChange={jobsStore.setHistoryFailedOnly}
+        onClearHistory={clearJobHistory}
+        onToggle={jobsStore.toggleSelection}
+        onToggleAll={jobsStore.toggleAll}
+        onCancelSelected={jobsStore.cancelSelected}
+        onUseJob={useJobAsPrompt}
+        onRetryJob={retryJob}
+        aiAssistantEnabled={aiAssistantAvailable}
+        diagnosingJobId={$assistantStore.diagnoseLoadingJobId}
+        diagnoses={jobDiagnoses}
+        onDiagnoseJob={diagnoseJob}
+      />
+    {:else}
+      <div class="grid min-h-64 place-items-center" role="status">{$t.common.loadingFeature}</div>
+    {/if}
   {/if}
 </main>
 

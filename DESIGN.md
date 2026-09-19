@@ -136,7 +136,7 @@ components:
 
 **Creative North Star: "The Quiet Control Room"**
 
-GPT Image Panel is a restrained operational workspace. Its visual system keeps the user's prompt, configuration, task state, preview, and image library in one continuous field of attention. Neutral stone and zinc surfaces carry most of the interface; Operational Emerald appears only where a decision, focus state, or active operation needs a clear signal.
+GPT Image Panel is a restrained operational workspace. Its visual system separates creation, the image library, and task monitoring into three focused routes while preserving draft state and predictable navigation between them. Neutral stone and zinc surfaces carry most of the interface; Operational Emerald appears only where a decision, focus state, or active operation needs a clear signal.
 
 The interface is quiet, disciplined, and operator-focused. Density is welcome when it improves scanning and repeated action, but every control must remain predictable and legible. The system explicitly rejects the neon creative-toy aesthetic: high-frequency animation, exaggerated gamification, and visually loud feedback are forbidden.
 
@@ -146,6 +146,7 @@ The interface is quiet, disciplined, and operator-focused. Density is welcome wh
 - Compact controls with stable 40px heights and 44px touch targets where icons stand alone.
 - Depth under one overhead light: raised surfaces are actionable, recessed surfaces receive input.
 - Precise state feedback for remote and asynchronous work, including motion that reports causality.
+- Dedicated Create, Gallery, and Jobs pages with route-specific URL state.
 - Responsive structures that preserve workflow order from desktop to mobile.
 
 ## 2. Colors
@@ -291,7 +292,7 @@ Buttons are restrained and operational.
 
 ### Navigation
 
-The sticky header is compact, border-led, and task-oriented. Product identity remains visible at the start; language, theme, reverse prompt, prompt snippets, jobs, and settings remain predictable commands. Mobile navigation wraps without reordering the workflow and preserves 44px touch targets.
+The sticky header is compact, border-led, and task-oriented. Product identity remains visible at the start; Create, Gallery, and Jobs are first-class routes, while language, reverse prompt, prompt snippets, and settings remain predictable commands. Mobile navigation wraps without reordering the routes and preserves 44px touch targets.
 
 ### Gallery Card
 
@@ -301,7 +302,7 @@ The gallery card is the signature repeated object. It uses a \`12px\` bordered c
 
 ### Do:
 
-- **Do** preserve the prompt → assistant → preview → gallery workflow order across viewport sizes.
+- **Do** preserve the Create, Gallery, and Jobs route order and keep unfinished creation state when moving between them.
 - **Do** use Operational Emerald for primary action, active state, focus, and success.
 - **Do** use neutral borders and tonal surfaces as the default hierarchy mechanism, with one step of elevation to separate what is actionable from what receives input.
 - **Do** make every animation report causality or a state change, and read its travel from a token.

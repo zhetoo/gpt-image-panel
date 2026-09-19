@@ -1,16 +1,27 @@
-import { expect, test, type Request } from '@playwright/test';
+import { expect, test, type Page, type Request } from '@playwright/test';
 import {
   PNG_BYTES,
   baseGalleryImages,
   galleryResponse,
   job,
   json,
-  loadApp,
+  loadApp as loadCreateApp,
   manyGalleryImages,
   manyJobs,
   mockApi,
   settingsResponse
 } from './fixtures/mockApi';
+import type { MockOptions } from './fixtures/mockApi';
+
+async function openGallery(page: Page) {
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Gallery', exact: true })).toBeVisible();
+}
+
+async function loadApp(page: Page, options: MockOptions = {}) {
+  await loadCreateApp(page, options);
+  await openGallery(page);
+}
 
 function gallerySearchBody(request: Request) {
   const url = new URL(request.url());
@@ -19,11 +30,13 @@ function gallerySearchBody(request: Request) {
 }
 
 test('generation, gallery edit source, batch favorite, and lightbox flows work with mocked API', async ({ page }) => {
-  await loadApp(page);
+  await loadCreateApp(page);
 
   await page.getByRole('textbox', { name: 'Prompt', exact: true }).fill('browser smoke prompt');
   await page.getByRole('button', { name: 'Generate', exact: true }).click();
   await expect(page.getByRole('img', { name: 'Generated preview' })).toBeVisible();
+
+  await openGallery(page);
 
   await page.locator('.gallery-card').first().getByRole('button', { name: 'Edit' }).click();
   const editDialog = page.getByRole('dialog', { name: 'Edit this image' });
@@ -33,6 +46,8 @@ test('generation, gallery edit source, batch favorite, and lightbox flows work w
   await page.getByRole('textbox', { name: 'Prompt', exact: true }).fill('browser edit prompt');
   await page.getByRole('button', { name: 'Edits' }).click();
   await expect(page.getByRole('img', { name: 'Generated preview' })).toBeVisible();
+
+  await openGallery(page);
 
   const filterRequest = page.waitForResponse((response) => {
     const body = gallerySearchBody(response.request());
@@ -69,9 +84,10 @@ test('generation, gallery edit source, batch favorite, and lightbox flows work w
 });
 
 test('gallery edit choice loads compatible parameters without changing the active API path', async ({ page }) => {
-  await loadApp(page);
+  await loadCreateApp(page);
 
   await page.getByLabel('API path').selectOption('/v1/responses');
+  await openGallery(page);
   await page.locator('.gallery-card').first().getByRole('button', { name: 'Edit' }).click();
   const editDialog = page.getByRole('dialog', { name: 'Edit this image' });
   await editDialog.getByRole('button', { name: 'Keep original prompt', exact: true }).click();
@@ -92,16 +108,19 @@ test('gallery edit choice loads compatible parameters without changing the activ
 });
 
 test('clearing the gallery prompt focuses the prompt field and cancel preserves form state', async ({ page }) => {
-  await loadApp(page);
+  await loadCreateApp(page);
 
   const prompt = page.getByRole('textbox', { name: 'Prompt', exact: true });
   await prompt.fill('keep this prompt');
+  await openGallery(page);
   await page.locator('.gallery-card').first().getByRole('button', { name: 'Edit' }).click();
   const editDialog = page.getByRole('dialog', { name: 'Edit this image' });
   await editDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('link', { name: 'Create', exact: true }).click();
   await expect(prompt).toHaveValue('keep this prompt');
   await expect(page.getByRole('button', { name: 'Preview Gallery: img-1.png' })).toHaveCount(0);
 
+  await openGallery(page);
   await page.locator('.gallery-card').first().getByRole('button', { name: 'Edit' }).click();
   await page.getByRole('dialog', { name: 'Edit this image' }).getByRole('button', { name: 'Clear prompt and describe changes', exact: true }).click();
   await expect(prompt).toHaveValue('');
@@ -372,11 +391,11 @@ test('NodeImage results group failures first, progressively reveal successes, an
   await expect(resultDialog.getByText('Direct link', { exact: true })).toHaveCount(20);
 
   await resultDialog.getByRole('button', { name: 'Copy all direct links' }).click();
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(
+  await expect.poll(() => page.evaluate(async () => (await navigator.clipboard.readText()).replaceAll('\r\n', '\n'))).toBe(
     Array.from({ length: 24 }, (_, index) => `https://cdn.nodeimage.com/paged-img-${index + 1}.png`).join('\n')
   );
   await resultDialog.getByRole('button', { name: 'Copy all Markdown links' }).click();
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(
+  await expect.poll(() => page.evaluate(async () => (await navigator.clipboard.readText()).replaceAll('\r\n', '\n'))).toBe(
     Array.from({ length: 24 }, (_, index) => `![Paged gallery image ${index + 1}](https://cdn.nodeimage.com/paged-img-${index + 1}.png)`).join('\n')
   );
 
@@ -526,6 +545,7 @@ test('gallery cards can reuse prompt or full generation parameters', async ({ pa
   await expect(page.getByRole('textbox', { name: 'Model' })).toHaveValue('preset-default-model');
   await expect(page.getByLabel('API path')).toHaveValue('/v1/images/generations');
 
+  await openGallery(page);
   await page.locator('.gallery-card').first().getByRole('button', { name: 'Use all' }).click();
   await expect(prompt).toHaveValue('First gallery image');
   await expect(page.locator('section.app-surface').first().getByRole('combobox', { name: 'Model', exact: true })).toHaveValue('gpt-image-2');
@@ -599,9 +619,9 @@ test('lightbox navigates images across gallery pages', async ({ page }) => {
   await expect(page).toHaveURL(/image=paged-img-10/);
 });
 
-test('gallery url state restores durable filters, lightbox, and job history tab', async ({ page }) => {
+test('gallery and jobs restore their route-specific URL state', async ({ page }) => {
   await mockApi(page);
-  await page.goto('/?prompt=Second&favorite=true&image=img-2&jobs=history');
+  await page.goto('/gallery?prompt=Second&favorite=true&image=img-2');
 
   await expect(page.getByLabel('Filter prompt')).toHaveValue('');
   await expect(page).not.toHaveURL(/prompt=/);
@@ -616,10 +636,12 @@ test('gallery url state restores durable filters, lightbox, and job history tab'
   await expect(lightbox).toBeHidden();
   await expect(page).not.toHaveURL(/image=img-2/);
 
-  const jobsDrawer = page.getByRole('dialog', { name: 'Job History' });
-  await expect(jobsDrawer).toBeVisible();
-  await expect(jobsDrawer.getByText('saved prompt')).toBeVisible();
-  await expect(page).toHaveURL(/jobs=history/);
+  await page.goto('/jobs?tab=history');
+  await expect(page.getByRole('heading', { name: 'Jobs', exact: true })).toBeVisible();
+  await expect(page.getByText('saved prompt')).toBeVisible();
+  await expect(page).toHaveURL(/tab=history/);
+
+  await page.getByRole('link', { name: 'Gallery', exact: true }).click();
 
   const promptFilterRequest = page.waitForRequest((request) => {
     const body = gallerySearchBody(request);

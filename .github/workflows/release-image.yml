@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE: ghcr.io/z1rconium/gpt-image-linux
+  IMAGE: ghcr.io/zhetoo/gpt-image-linux
 
 jobs:
   build:

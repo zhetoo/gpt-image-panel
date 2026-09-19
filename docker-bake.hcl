@@ -13,11 +13,11 @@
 // cache is already warm (it only pays off after `buildx prune` or on a new host).
 
 variable "IMAGE" {
-  default = "ghcr.io/z1rconium/gpt-image-linux"
+  default = "ghcr.io/zhetoo/gpt-image-linux"
 }
 
 variable "CACHE_IMAGE" {
-  default = "ghcr.io/z1rconium/gpt-image-linux-build-cache"
+  default = "ghcr.io/zhetoo/gpt-image-linux-build-cache"
 }
 
 variable "TAG" {

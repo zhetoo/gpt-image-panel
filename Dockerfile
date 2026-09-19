@@ -7,15 +7,16 @@ ARG NODE_BASE_IMAGE=node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81c
 
 FROM --platform=$BUILDPLATFORM ${NODE_BASE_IMAGE} AS frontend-builder
 WORKDIR /frontend
-COPY frontend/package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+RUN corepack enable
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 COPY frontend/svelte.config.js frontend/vite.config.ts frontend/tsconfig.json frontend/tailwind.config.ts frontend/postcss.config.cjs ./
 COPY frontend/static/ ./static/
 COPY frontend/src/ ./src/
-RUN --mount=type=cache,target=/root/.npm \
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     --mount=type=cache,target=/frontend/node_modules/.vite \
-    npx svelte-kit sync && npm run build
+    pnpm exec svelte-kit sync && pnpm run build
 
 FROM ${PYTHON_BASE_IMAGE} AS python-builder
 WORKDIR /app

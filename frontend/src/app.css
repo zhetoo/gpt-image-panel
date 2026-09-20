@@ -978,8 +978,11 @@ html.dark .gallery-loading-overlay {
     padding-top: env(safe-area-inset-top);
   }
 
-  .optimizer-gutter {
-    padding-right: max(4.5rem, calc(4rem + env(safe-area-inset-right)));
+  /* Keep the draggable assistant clear of the lower form controls on narrow screens. */
+  .optimizer-trigger {
+    top: 8rem;
+    right: 0.75rem;
+    bottom: auto;
   }
 
   .mobile-drawer-root,

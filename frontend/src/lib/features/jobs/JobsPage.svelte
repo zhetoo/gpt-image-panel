@@ -141,12 +141,12 @@
 </script>
 
 <section class="app-surface flex min-h-[calc(100dvh-11rem)] flex-col overflow-hidden" aria-labelledby="jobs-page-title">
-  <div class="border-b border-stone-200 px-5 py-4 dark:border-zinc-800 sm:px-6">
+  <div class="border-b border-stone-200 px-4 py-4 dark:border-zinc-800 sm:px-6">
     <h2 id="jobs-page-title" class="text-lg font-semibold text-stone-950 dark:text-zinc-100">{$t.jobs.title}</h2>
     <p class="mt-1 text-xs text-stone-500 dark:text-zinc-500">{$t.jobs.subtitle}</p>
   </div>
 
-  <div class="flex flex-col gap-3 border-b border-stone-200 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-zinc-800">
+  <div class="flex flex-col gap-3 border-b border-stone-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-zinc-800">
     <div class="grid grid-cols-2 rounded-lg border border-stone-200 bg-stone-100 p-1 text-xs font-medium dark:border-zinc-800 dark:bg-zinc-950">
       <button type="button" class={`control-focus rounded-md px-4 py-2 ${activeTab === 'running' ? 'bg-white text-stone-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-none' : 'text-stone-500 hover:text-stone-900 dark:text-zinc-500 dark:hover:text-zinc-200'}`} aria-pressed={activeTab === 'running'} onclick={() => selectTab('running')}>
         {$t.jobs.runningTab}
@@ -156,7 +156,7 @@
       </button>
     </div>
 
-    <div class="flex flex-wrap justify-end gap-2">
+    <div class="flex flex-wrap gap-2 sm:justify-end">
       {#if activeTab === 'running'}
         <button type="button" class="control-focus rounded-lg border border-stone-300 px-3 py-2 text-xs text-stone-700 hover:bg-stone-100 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800" disabled={!jobs.length} onclick={onToggleAll}>
           {$t.jobs.selectAll}

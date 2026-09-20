@@ -360,7 +360,7 @@
                 <p class="line-clamp-2 text-xs leading-5 text-stone-800 dark:text-zinc-200">{image.prompt}</p>
                 <p class="mt-1 truncate text-xs leading-4 text-stone-500 dark:text-zinc-500">{displayImageSize(image)} / {image.model || '-'}</p>
               </div>
-              <div class="gallery-card-actions grid grid-cols-4 gap-1">
+              <div class="gallery-card-actions grid grid-cols-2 gap-1 sm:grid-cols-4">
                 <button
                   type="button"
                   class="gallery-icon-action control-focus border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-200"

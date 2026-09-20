@@ -415,7 +415,7 @@
     bind:this={triggerButton}
     data-testid="prompt-optimizer-assistant-trigger"
     class:cursor-grabbing={dragging}
-    class="control-focus fixed bottom-4 right-3 z-40 inline-flex h-11 w-11 touch-none select-none items-center justify-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-600 px-0 text-sm font-semibold text-white shadow-[0_18px_36px_-24px_rgba(16,185,129,0.6)] transition-transform hover:bg-emerald-500 active:scale-[0.98] sm:bottom-6 sm:right-6 sm:w-auto sm:rounded-full sm:px-4"
+    class="optimizer-trigger control-focus fixed bottom-[max(0.25rem,env(safe-area-inset-bottom))] right-3 z-40 inline-flex h-11 w-11 touch-none select-none items-center justify-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-600 px-0 text-sm font-semibold text-white shadow-[0_18px_36px_-24px_rgba(16,185,129,0.6)] transition-transform hover:bg-emerald-500 active:scale-[0.98] sm:bottom-6 sm:right-6 sm:w-auto sm:rounded-full sm:px-4"
     aria-haspopup="dialog"
     aria-expanded={open}
     aria-label={$t.promptOptimizerAssistant.open}

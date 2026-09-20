@@ -292,7 +292,7 @@ Buttons are restrained and operational.
 
 ### Navigation
 
-The sticky header is compact, border-led, and task-oriented. Product identity remains visible at the start; Create, Gallery, and Jobs are first-class routes, while language, reverse prompt, prompt snippets, and settings remain predictable commands. Mobile navigation wraps without reordering the routes and preserves 44px touch targets.
+The sticky header is compact, border-led, and task-oriented. Product identity remains visible at the start; Create, Gallery, and Jobs are first-class routes, while language, reverse prompt, prompt snippets, and settings remain predictable commands. Mobile navigation wraps without reordering the routes and preserves 44px touch targets. On narrow screens, the prompt form stays single-column until 420px so the floating optimizer control cannot cover an input; wider phones can use a compact two-column parameter row while the action buttons remain full-width on small screens.
 
 ### Gallery Card
 

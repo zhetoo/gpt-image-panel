@@ -1290,7 +1290,6 @@
 <main
   id="main-content"
   tabindex="-1"
-  class:optimizer-gutter={optimizerAssistantEnabled}
   class={`mx-auto space-y-6 px-4 py-6 pb-28 sm:px-6 sm:pb-32 ${activeRoute === 'gallery' ? 'max-w-7xl' : activeRoute === 'jobs' ? 'max-w-6xl' : 'max-w-7xl'}`}
 >
   <ToastHost toast={$toastStore} />

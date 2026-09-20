@@ -162,8 +162,8 @@
   <div class="mt-5 space-y-3">
     <!-- Block 1: Core Generation Parameters (4 columns, balanced 100%) -->
     <div class="app-well rounded-xl border border-stone-200/80 bg-stone-50/50 p-3.5 dark:border-zinc-800/80 dark:bg-zinc-950/40">
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <ImageModelPicker bind:value={promptForm.model} disabled={loading} />
+      <div class="grid gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
+        <div class="min-[420px]:col-span-2 lg:col-span-1"><ImageModelPicker bind:value={promptForm.model} disabled={loading} /></div>
 
         <label class="block">
           <span class="mb-1.5 block text-xs font-medium text-stone-600 dark:text-zinc-400">{$t.common.size}</span>
@@ -301,7 +301,7 @@
     {@render editSource?.()}
   </div>
 
-  <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-stone-200/80 pt-4 dark:border-zinc-800/80">
+  <div class="mt-5 flex flex-col items-stretch gap-3 border-t border-stone-200/80 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800/80">
     <div class="flex items-center gap-2 text-xs text-stone-500 dark:text-zinc-400">
       {#if hasEditSource}
         <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 font-medium text-emerald-700 dark:text-emerald-300">
@@ -315,17 +315,17 @@
       {/if}
     </div>
 
-    <div class="flex flex-col items-end gap-1">
-      <div class="flex items-center gap-2">
+    <div class="flex flex-col items-stretch gap-1 sm:items-end">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
           disabled={loading || editPlanning || !editPlannerEnabled || !promptForm.prompt.trim()}
-          class="ui-button-secondary px-4"
+          class="ui-button-secondary w-full px-4 sm:w-auto"
           onclick={onPlanEdit}
         >
           {editPlanning ? $t.promptForm.planningEdit : $t.promptForm.planEdit}
         </button>
-        <button type="button" disabled={loading} class="ui-button-primary px-5 font-semibold" onclick={onSubmit}>
+        <button type="button" disabled={loading} class="ui-button-primary w-full px-5 font-semibold sm:w-auto" onclick={onSubmit}>
           {hasEditSource ? $t.promptForm.edits : $t.promptForm.generate}
         </button>
       </div>

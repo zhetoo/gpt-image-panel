@@ -282,6 +282,12 @@ IMAGE_JOB_UNIT_LEASE_RENEW_SECONDS = _clamp_lease_renew(
 # How many times an image unit may be claimed (each claim increments attempts)
 # before an exhausted lease is interrupted instead of retried forever.
 IMAGE_JOB_UNIT_MAX_ATTEMPTS = max(1, int(os.getenv("IMAGE_JOB_UNIT_MAX_ATTEMPTS", "2")))
+# Number of attempts for a retryable upstream generation failure, including
+# the initial request
+IMAGE_UPSTREAM_MAX_ATTEMPTS = max(1, int(os.getenv("IMAGE_UPSTREAM_MAX_ATTEMPTS", "3")))
+IMAGE_UPSTREAM_RETRY_BACKOFF_SECONDS = max(
+    0.0, float(os.getenv("IMAGE_UPSTREAM_RETRY_BACKOFF_SECONDS", "1"))
+)
 IMAGE_JOB_UNIT_POLL_INTERVAL_SECONDS = max(
     0.1,
     float(os.getenv("IMAGE_JOB_UNIT_POLL_INTERVAL_SECONDS", "0.35")),

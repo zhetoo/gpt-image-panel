@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class UpstreamApiError(Exception):
-    pass
+    def __init__(self, message: str, *, retryable: bool = True):
+        super().__init__(message)
+        self.retryable = retryable
 
 
 class UpstreamImageDownloadError(UpstreamApiError):
@@ -84,11 +86,16 @@ def raise_upstream_error(
         "unknown endpoint",
         "no route",
     )
+    retryable = status in {408, 409, 425, 429} or status >= 500
     if api_path == "/v1/images/edits" and (
         status in {404, 405, 501}
         or any(marker in error_msg.lower() for marker in unsupported_markers)
     ):
         raise UpstreamApiError(
-            f"Upstream API does not support /v1/images/edits ({status}): {error_msg}"
+            f"Upstream API does not support /v1/images/edits ({status}): {error_msg}",
+            retryable=False,
         )
-    raise UpstreamApiError(f"Upstream API error ({status}): {error_msg}")
+    raise UpstreamApiError(
+        f"Upstream API error ({status}): {error_msg}",
+        retryable=retryable,
+    )

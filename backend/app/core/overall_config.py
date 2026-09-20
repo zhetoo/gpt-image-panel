@@ -154,6 +154,8 @@ OVERALL_CONFIG_REGISTRY: tuple[OverallConfigSpec, ...] = (
         "float",
         str(config.IMAGE_JOB_UNIT_LEASE_RENEW_SECONDS), "Job Queue / SSE", "How often the executing worker renews an image unit lease; must be below lease/2.", restart_required=True, min_value=5),
     _spec("IMAGE_JOB_UNIT_MAX_ATTEMPTS", "int", "2", "Job Queue / SSE", "Max claim attempts for one image unit before an expired lease is marked interrupted.", restart_required=True, min_value=1),
+    _spec("IMAGE_UPSTREAM_MAX_ATTEMPTS", "int", "3", "Job Queue / SSE", "Total attempts for retryable upstream image generation failures.", restart_required=True, min_value=1),
+    _spec("IMAGE_UPSTREAM_RETRY_BACKOFF_SECONDS", "float", "1", "Job Queue / SSE", "Delay before retrying a retryable upstream image generation failure.", restart_required=True, min_value=0),
     _spec("MAX_PENDING_EDIT_SOURCE_MB", "int", str(config.MAX_PENDING_EDIT_SOURCE_MB), "Job Queue / SSE", "SQLite global pending edit source byte cap.", min_value=0),
     _spec("MAX_SSE_SUBSCRIBERS_GLOBAL", "int", "200", "Job Queue / SSE", "Global active SSE subscriber cap across Granian workers via SQLite slot leases.", min_value=1),
     _spec("MAX_SSE_SUBSCRIBERS_PER_IP", "int", "10", "Job Queue / SSE", "Per-IP active SSE subscriber cap.", min_value=1),

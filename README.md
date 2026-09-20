@@ -269,6 +269,7 @@ Most runtime options live in `.env.example`. API presets, prompt optimizer, R2 b
 | `IMAGE_JOB_UNIT_LEASE_SECONDS` | SQLite claim lease for a running image unit. Crash-detection latency only — the executing worker renews the lease while upstream is in flight, so slow upstreams no longer lose their ownership. The upstream duration cap is still governed by the client timeout in `session_pool`. |
 | `IMAGE_JOB_UNIT_LEASE_RENEW_SECONDS` | Cadence at which the executing worker extends an image-unit lease. Must stay below `lease/2` (defaults to `lease/3`); clamps to `lease/4` if misconfigured. A renewal that fails with a SQLite error is retried every 5s while the lease is still valid; only a renewal rejected by fencing (the unit was re-claimed or cancelled) aborts the in-flight upstream call immediately, so cancelling a job now stops its upstream request within one renewal interval. |
 | `IMAGE_JOB_UNIT_MAX_ATTEMPTS` | Max claim attempts per image unit. A unit whose lease expires after its final attempt is marked `interrupted` instead of retried forever. |
+| `IMAGE_UPSTREAM_MAX_ATTEMPTS` / `IMAGE_UPSTREAM_RETRY_BACKOFF_SECONDS` | Total attempts and linear backoff for retryable upstream image failures. Defaults to `3` attempts and `1` second. |
 | `MAX_PENDING_EDIT_SOURCE_MB` | Global pending edit-source byte reservation cap. |
 | `MAX_SSE_SUBSCRIBERS_GLOBAL` / `MAX_SSE_SUBSCRIBERS_PER_IP` / `SSE_CONNECTION_TTL_SECONDS` | SSE slot limits and max connection lifetime. |
 | `IMAGES_DIR` | Saved image directory. |

@@ -665,46 +665,62 @@ async def run_claimed_image_unit(unit: dict, worker_id: str):
             metrics.increment("image_job.streaming_requested")
 
         async def run_upstream() -> list:
-            with use_job_stage_timer(stage_timer), use_usage_sink(usage_sink):
-                if operation == "edit":
-                    edit_sources = [
-                        edit_source_from_payload(source)
-                        for source in unit.get("edit_sources") or []
-                    ]
-                    image_sources = [
-                        source for source in edit_sources if source.role == "image"
-                    ]
-                    mask_source = next(
-                        (source for source in edit_sources if source.role == "mask"),
-                        None,
-                    )
-                    if not image_sources:
-                        raise proxy.UpstreamApiError(
-                            "At least one edit source image is required"
+            for attempt in range(1, config.IMAGE_UPSTREAM_MAX_ATTEMPTS + 1):
+                try:
+                    with use_job_stage_timer(stage_timer), use_usage_sink(usage_sink):
+                        if operation == "edit":
+                            edit_sources = [
+                                edit_source_from_payload(source)
+                                for source in unit.get("edit_sources") or []
+                            ]
+                            image_sources = [
+                                source for source in edit_sources if source.role == "image"
+                            ]
+                            mask_source = next(
+                                (source for source in edit_sources if source.role == "mask"),
+                                None,
+                            )
+                            if not image_sources:
+                                raise proxy.UpstreamApiError(
+                                    "At least one edit source image is required",
+                                    retryable=False,
+                                )
+                            return await proxy.call_image_edit_api(
+                                api_url,
+                                api_key,
+                                req,  # type: ignore[arg-type]
+                                image_sources,
+                                api_preset_name,
+                                progress,
+                                socks5_proxy=socks5_proxy,
+                                persist_gallery_entry=add_to_gallery_async,
+                                mask_source=mask_source,
+                                **stream_kwargs,
+                            )
+                        return await proxy.call_image_generation_api(
+                            api_url,
+                            api_key,
+                            api_path,
+                            req,  # type: ignore[arg-type]
+                            api_preset_name,
+                            progress,
+                            socks5_proxy=socks5_proxy,
+                            persist_gallery_entry=add_to_gallery_async,
+                            **stream_kwargs,
                         )
-                    return await proxy.call_image_edit_api(
-                        api_url,
-                        api_key,
-                        req,  # type: ignore[arg-type]
-                        image_sources,
-                        api_preset_name,
-                        progress,
-                        socks5_proxy=socks5_proxy,
-                        persist_gallery_entry=add_to_gallery_async,
-                        mask_source=mask_source,
-                        **stream_kwargs,
+                except proxy.UpstreamApiError as error:
+                    if not error.retryable or attempt >= config.IMAGE_UPSTREAM_MAX_ATTEMPTS:
+                        raise
+                    delay = config.IMAGE_UPSTREAM_RETRY_BACKOFF_SECONDS * attempt
+                    logger.warning(
+                        "Retrying upstream image request after failure: attempt=%s/%s delay=%.1fs error=%s",
+                        attempt,
+                        config.IMAGE_UPSTREAM_MAX_ATTEMPTS,
+                        delay,
+                        error,
                     )
-                return await proxy.call_image_generation_api(
-                    api_url,
-                    api_key,
-                    api_path,
-                    req,  # type: ignore[arg-type]
-                    api_preset_name,
-                    progress,
-                    socks5_proxy=socks5_proxy,
-                    persist_gallery_entry=add_to_gallery_async,
-                    **stream_kwargs,
-                )
+                    metrics.increment("image_jobs.upstream_retry")
+                    await asyncio.sleep(delay)
 
         lease_task = asyncio.create_task(renew_lease_loop())
         upstream_task = asyncio.create_task(run_upstream())
